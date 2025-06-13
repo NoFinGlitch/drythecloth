@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dry The Clothes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            background-color: #87CEEB; /* Sky Blue */
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.9;
+            animation: move-clouds linear infinite;
+        }
+
+        .cloud:before, .cloud:after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .cloud:before {
+            width: 100%; height: 100%;
+            top: -50%; right: -30%;
+        }
+
+        .cloud:after {
+            width: 60%; height: 60%;
+            top: -70%; left: -20%;
+        }
+        
+        @keyframes move-clouds {
+            0% { transform: translateX(-200px); }
+            100% { transform: translateX(100vw); }
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-2px, 0, 0); }
+            40%, 60% { transform: translate3d(2px, 0, 0); }
+        }
+        
+        .bubble {
+            position: absolute;
+            background-color: rgba(220, 230, 255, 0.7);
+            border-radius: 50%;
+            animation: rise 2s ease-in forwards;
+        }
+
+        @keyframes rise {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-80px); opacity: 0; }
+        }
+
+        .shiny::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(white, transparent 40%);
+            animation: rotate-shine 3s linear infinite;
+        }
+        
+        @keyframes rotate-shine {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .no-select {
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10 and IE 11 */
+            user-select: none; /* Standard syntax */
+        }
+    </style>
+</head>
+<body class="bg-sky-400 no-select">
+
+    <div id="game-container">
+        <!-- Dynamic Clouds -->
+        <div id="cloud-container"></div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="absolute inset-0 flex flex-col items-center justify-center text-center text-white z-20">
+            <h1 class="text-6xl md:text-8xl font-bold text-black mb-8" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">Dry The Clothes</h1>
+            <button id="start-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-10 rounded-xl text-2xl shadow-lg transform hover:scale-105 transition-transform">Start Game</button>
+            <button id="tutorial-button" class="mt-4 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl text-xl shadow-lg transform hover:scale-105 transition-transform">How to Play</button>
+        </div>
+
+        <!-- Tutorial Screen -->
+        <div id="tutorial-screen" class="hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-8 rounded-2xl max-w-lg w-full text-gray-800">
+                <h2 class="text-3xl font-bold mb-4 text-center">How to Play</h2>
+                <ul class="space-y-2 text-left">
+                    <li><strong class="text-orange-600">1. Buy Clothes:</strong> Tap the Clothing Store to buy unwashed clothes.</li>
+                    <li><strong class="text-blue-600">2. Wash:</strong> Tap an unwashed cloth in your inventory, then tap a washing machine to load it. Tap the machine again to start.</li>
+                    <li><strong class="text-green-600">3. Dry:</strong> When done, clothes are wet. Tap a wet cloth, then a clothesline to hang it.</li>
+                    <li><strong class="text-yellow-600">4. Sell:</strong> Set your sell timer at the top and tap "Start Autosell" to earn Dryckles automatically!</li>
+                    <li><strong class="text-purple-600">5. Manage Gear:</strong> Buy more machines and lines from the Gear Shop. Double-tap and drag gear to move it. Drop it on the trash can to delete.</li>
+                </ul>
+                <button id="close-tutorial" class="mt-6 w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Got It!</button>
+            </div>
+        </div>
+        
+        <!-- Main Game Screen -->
+        <div id="game-screen" class="hidden relative w-full h-full">
+            <!-- Top UI Bar -->
+            <div class="absolute top-0 left-0 w-full bg-black bg-opacity-50 p-2 flex items-center justify-between text-white z-30 flex-wrap">
+                <div class="flex items-center space-x-4">
+                     <div class="font-bold text-lg">💰 <span id="dryckles-count">10</span></div>
+                     <button id="ingame-back-button" class="bg-gray-600 hover:bg-gray-700 text-xs py-1 px-2 rounded-md">Menu</button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="number" id="autosell-input" value="5" class="w-16 text-black text-center rounded-md p-1">
+                    <button id="start-autosell-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-md text-sm">Start Autosell</button>
+                </div>
+                 <div id="autosell-timer-display" class="text-xs w-full text-center mt-1"></div>
+            </div>
+
+            <!-- Inventory Bar -->
+            <div id="inventory-bar" class="absolute top-16 left-0 w-full bg-black bg-opacity-40 p-2 flex justify-around text-white z-30 text-xs md:text-sm">
+                <div id="unwashed-inventory"><strong>Unwashed:</strong> 0</div>
+                <div id="wet-inventory"><strong>Wet:</strong> 0</div>
+                <div id="dry-inventory"><strong>Dry:</strong> 0</div>
+            </div>
+
+            <!-- Shops Area -->
+            <div class="absolute w-full flex justify-center space-x-8 z-10" style="top: 28vh;">
+                 <div id="clothing-store-obj" class="w-24 h-20 bg-blue-800 rounded-lg shadow-lg flex flex-col items-center justify-center cursor-pointer transform hover:scale-105 transition-transform"></div>
+                 <div id="gear-store-obj" class="w-24 h-20 bg-gray-800 rounded-lg shadow-lg flex flex-col items-center justify-center cursor-pointer transform hover:scale-105 transition-transform"></div>
+            </div>
+
+            <!-- Plot Area -->
+            <div class="absolute bottom-0 left-0 w-full h-[60%] bg-green-400 border-t-8 border-green-600">
+                <div id="plot" class="relative w-full h-full">
+                    <!-- Gear items will be added here -->
+                    <div id="delete-bin" class="absolute bottom-4 right-4 w-16 h-16 bg-gray-500 rounded-full flex items-center justify-center border-4 border-gray-700">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Modals -->
+        <div id="shop-modal" class="hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+             <div class="bg-white p-4 rounded-2xl max-w-lg w-full text-gray-800 flex flex-col" style="height: 80vh;">
+                <h2 id="shop-title" class="text-3xl font-bold mb-2 text-center">Shop</h2>
+                <div id="shop-content" class="flex-grow overflow-y-auto space-y-3 p-2 bg-gray-200 rounded-lg">
+                    <!-- Shop items will be added here -->
+                </div>
+                <div id="shop-timer" class="text-center mt-2 text-sm text-gray-600"></div>
+                <button id="close-shop" class="mt-4 w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const gameContainer = document.getElementById('game-container');
+            const mainMenu = document.getElementById('main-menu');
+            const tutorialScreen = document.getElementById('tutorial-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const plot = document.getElementById('plot');
+            const drycklesCount = document.getElementById('dryckles-count');
+
+            // Buttons
+            const startButton = document.getElementById('start-button');
+            const tutorialButton = document.getElementById('tutorial-button');
+            const closeTutorialButton = document.getElementById('close-tutorial');
+            const ingameBackButton = document.getElementById('ingame-back-button');
+            const startAutosellButton = document.getElementById('start-autosell-button');
+            const closeShopButton = document.getElementById('close-shop');
+            
+            // Shops
+            const clothingStoreObj = document.getElementById('clothing-store-obj');
+            const gearStoreObj = document.getElementById('gear-store-obj');
+            const shopModal = document.getElementById('shop-modal');
+            const shopTitle = document.getElementById('shop-title');
+            const shopContent = document.getElementById('shop-content');
+            const shopTimerDisplay = document.getElementById('shop-timer');
+
+            // Inventory
+            const inventoryDisplays = {
+                unwashed: document.getElementById('unwashed-inventory'),
+                wet: document.getElementById('wet-inventory'),
+                dry: document.getElementById('dry-inventory'),
+            };
+
+            // Autosell
+            const autosellInput = document.getElementById('autosell-input');
+            const autosellTimerDisplay = document.getElementById('autosell-timer-display');
+
+            // --- Game State ---
+            let gameState = 'menu';
+            let player = {};
+            let shops = {};
+            let gear = []; // Will hold all machine/line objects
+            let draggedItem = null;
+            let dragOffsetX = 0;
+            let dragOffsetY = 0;
+            let autosellInterval;
+
+            // --- Game Constants ---
+            const STARTING_DRYCKLES = 10;
+            const WASH_TIME_SECONDS = 10;
+            const DRY_TIME_SECONDS = 5;
+            const SHOP_RESTOCK_SECONDS = 60;
+            const GEAR_DEFINITIONS = {
+                rusty_wm: { name: "Rusty Washer", type: "washing_machine", capacity: 5, super_chance: 0, cost: 0 },
+                silver_wm: { name: "Silver Washer", type: "washing_machine", capacity: 7, super_chance: 0.3, super_type: "silver", value_multiplier: 2, cost: 50 },
+                gold_wm: { name: "Gold Washer", type: "washing_machine", capacity: 10, super_chance: 0.2, super_type: "gold", value_multiplier: 3, cost: 150 },
+                wooden_cl: { name: "Wooden Line", type: "clothes_line", capacity: 3, cost: 0 },
+                silver_cl: { name: "Silver Line", type: "clothes_line", capacity: 5, cost: 40 },
+                gold_cl: { name: "Gold Line", type: "clothes_line", capacity: 10, cost: 120 }
+            };
+            const CLOTHES_DEFINITIONS = {
+                normal: { name: "Normal", cost: 2, value: 3, color: "bg-white", particle: null },
+                silver: { name: "Silver", cost: 4, value: 6, color: "bg-gray-300", particle: "shiny-white" },
+                gold: { name: "Gold", cost: 6, value: 7, color: "bg-yellow-300", particle: "shiny-yellow" },
+                emerald: { name: "Emerald", cost: 9, value: 15, color: "bg-green-700", particle: "shiny-green" }
+            };
+
+            // --- Game Setup ---
+            function initGame() {
+                // Reset player
+                player = {
+                    dryckles: STARTING_DRYCKLES,
+                    inventory: { unwashed: [], wet: [], dry: [] },
+                };
+
+                // Reset gear
+                gear.forEach(g => g.element.remove());
+                gear = [];
+                addGear('rusty_wm', 20, 50);
+                addGear('wooden_cl', 60, 50);
+
+                // Setup shops
+                shops.clothing = new Shop('clothing');
+                shops.gear = new Shop('gear');
+
+                // Update UI
+                updateDryckles();
+                updateAllInventories();
+                
+                // Switch screens
+                mainMenu.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                gameState = 'playing';
+            }
+
+            // --- Game Loop ---
+            function gameLoop() {
+                if (gameState === 'playing') {
+                    // Update all game objects
+                    gear.forEach(g => g.update());
+                    Object.values(shops).forEach(s => s.update());
+                }
+                requestAnimationFrame(gameLoop);
+            }
+
+            // --- UI Update Functions ---
+            function updateDryckles() {
+                drycklesCount.textContent = player.dryckles;
+            }
+
+            function updateInventoryDisplay(type) {
+                const count = player.inventory[type].length;
+                inventoryDisplays[type].innerHTML = `<strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${count}`;
+            }
+
+            function updateAllInventories() {
+                Object.keys(inventoryDisplays).forEach(updateInventoryDisplay);
+            }
+
+            // --- Core Classes ---
+            class Shop {
+                constructor(type) {
+                    this.type = type;
+                    this.restockTimer = SHOP_RESTOCK_SECONDS;
+                    if (type === 'clothing') {
+                        this.definitions = CLOTHES_DEFINITIONS;
+                        this.stock_chances = { normal: 0.99, silver: 0.70, gold: 0.35, emerald: 0.15 };
+                        this.stock_qtys = { normal: [5,8], silver: [4,6], gold: [1,3], emerald: [1,2] };
+                    } else { // gear
+                        this.definitions = {
+                             silver_wm: GEAR_DEFINITIONS.silver_wm,
+                             gold_wm: GEAR_DEFINITIONS.gold_wm,
+                             silver_cl: GEAR_DEFINITIONS.silver_cl,
+                             gold_cl: GEAR_DEFINITIONS.gold_cl,
+                        };
+                        this.stock_chances = { silver_wm: 0.35, gold_wm: 0.15, silver_cl: 0.35, gold_cl: 0.15 };
+                        this.stock_qtys = { silver_wm: [1,1], gold_wm: [1,1], silver_cl: [1,1], gold_cl: [1,1] };
+                    }
+                    this.stock = {};
+                    this.restock();
+                }
+
+                restock() {
+                    this.stock = {};
+                    for (const key in this.definitions) {
+                        if (this.stock_chances[key] && Math.random() < this.stock_chances[key]) {
+                            const [min, max] = this.stock_qtys[key];
+                            this.stock[key] = Math.floor(Math.random() * (max - min + 1)) + min;
+                        }
+                    }
+                }
+
+                update() {
+                    this.restockTimer -= 1/FPS;
+                    if (this.restockTimer <= 0) {
+                        this.restockTimer = SHOP_RESTOCK_SECONDS;
+                        this.restock();
+                    }
+                }
+
+                buyItem(key) {
+                   if (this.stock[key] > 0 && player.dryckles >= this.definitions[key].cost) {
+                        player.dryckles -= this.definitions[key].cost;
+                        this.stock[key]--;
+
+                        if (this.type === 'clothing') {
+                            player.inventory.unwashed.push({ id: Date.now() + Math.random(), type: key });
+                            updateAllInventories();
+                        } else {
+                            addGear(key, 10, 10);
+                        }
+                        
+                        updateDryckles();
+                        this.display(); // Refresh shop view
+                   }
+                }
+
+                display() {
+                    shopTitle.textContent = this.type === 'clothing' ? 'Clothing Store' : 'Gear Shop';
+                    shopContent.innerHTML = '';
+
+                    for (const key in this.stock) {
+                        if (this.stock[key] <= 0) continue;
+                        const item = this.definitions[key];
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'flex items-center p-2 bg-gray-300 rounded-lg';
+                        
+                        let itemHTML = `
+                            <div class="w-24 h-24 bg-gray-400 rounded-md flex items-center justify-center mr-4">
+                                ${this.type === 'clothing' ? this.getClothingHTML(key) : this.getGearHTML(key)}
+                            </div>
+                            <div class="flex-grow">
+                                <h3 class="font-bold">${item.name}</h3>
+                                <p class="text-sm">In Stock: ${this.stock[key]}</p>
+                                <p class="text-sm font-semibold">Cost: ${item.cost}💰</p>
+                            </div>
+                            <button data-item-key="${key}" class="buy-button bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Buy</button>
+                        `;
+                        itemEl.innerHTML = itemHTML;
+                        shopContent.appendChild(itemEl);
+                    }
+                     
+                    shopContent.querySelectorAll('.buy-button').forEach(btn => {
+                        btn.addEventListener('click', (e) => this.buyItem(e.target.dataset.itemKey));
+                    });
+                }
+
+                getClothingHTML(key) {
+                     const color = CLOTHES_DEFINITIONS[key].color;
+                     return `<div class="relative w-12 h-16 ${color} rounded-t-md"><div class="absolute top-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-gray-400 rounded-full"></div><div class="absolute top-4 left-0 -translate-x-3/4 w-4 h-8 ${color} rounded-l-md"></div><div class="absolute top-4 right-0 translate-x-3/4 w-4 h-8 ${color} rounded-r-md"></div></div>`;
+                }
+                getGearHTML(key){
+                     if (key.includes('wm')) {
+                        const color = key.includes('silver') ? 'bg-gray-400' : 'bg-yellow-400';
+                        return `<div class="w-16 h-20 ${color} rounded-lg flex items-center justify-center"><div class="w-10 h-10 bg-black rounded-full"></div></div>`
+                     } else {
+                        const color = key.includes('silver') ? 'bg-gray-400' : 'bg-yellow-400';
+                        return `<div class="w-20 h-20 flex items-center justify-between"><div class="w-3 h-20 ${color} rounded-full"></div><div class="w-full h-1 bg-gray-600"></div><div class="w-3 h-20 ${color} rounded-full"></div></div>`
+                     }
+                }
+            }
+
+            // --- Gear Classes ---
+            function addGear(key, xPercent, yPercent) {
+                const def = GEAR_DEFINITIONS[key];
+                const gearItem = def.type === 'washing_machine' ? new WashingMachine(def) : new ClothesLine(def);
+                gearItem.element.style.left = `${xPercent}%`;
+                gearItem.element.style.top = `${yPercent}%`;
+                plot.appendChild(gearItem.element);
+                gear.push(gearItem);
+            }
+
+            class DraggableGear {
+                constructor(def) {
+                    this.id = Date.now() + Math.random();
+                    this.def = def;
+                    this.element = document.createElement('div');
+                    this.element.className = 'absolute cursor-pointer';
+                    this.isDragging = false;
+                    this.lastClickTime = 0;
+
+                    this.element.addEventListener('dblclick', (e) => this.startDrag(e));
+                    this.element.addEventListener('click', (e) => this.onClick(e));
+                }
+
+                startDrag(e) {
+                    if (this.is_active) return;
+                    this.isDragging = true;
+                    draggedItem = this;
+                    this.element.style.zIndex = 100;
+                    const rect = this.element.getBoundingClientRect();
+                    dragOffsetX = e.clientX - rect.left;
+                    dragOffsetY = e.clientY - rect.top;
+                }
+
+                onClick() {
+                    // Implemented by subclasses
+                }
+                 update() {
+                    // Implemented by subclasses
+                 }
+            }
+
+            class WashingMachine extends DraggableGear {
+                constructor(def) {
+                    super(def);
+                    this.is_active = false;
+                    this.items = [];
+                    this.startTime = 0;
+                    this.element.innerHTML = `<div class="w-16 h-24 ${def.name.includes('Silver') ? 'bg-gray-400' : def.name.includes('Gold') ? 'bg-yellow-400' : 'bg-gray-600'} rounded-lg flex items-center justify-center relative shadow-md"><div class="w-10 h-10 bg-black rounded-full"></div><div class="progress-bar-container absolute bottom-1 w-14 h-2 bg-gray-700 rounded-full hidden"><div class="progress-bar h-full bg-green-500 rounded-full" style="width: 0%;"></div></div></div>`
+                }
+                 onClick(){
+                    if (this.is_active) return;
+                    if (this.items.length === 0 && player.inventory.unwashed.length > 0) {
+                        const toLoad = player.inventory.unwashed.splice(0, this.def.capacity);
+                        this.items.push(...toLoad);
+                    } else if (this.items.length > 0) {
+                        this.is_active = true;
+                        this.startTime = Date.now();
+                        this.element.querySelector('.progress-bar-container').classList.remove('hidden');
+                        this.element.querySelector('.shake').classList.add('shake');
+                    }
+                    updateAllInventories();
+                 }
+                 update(){
+                    if (this.is_active) {
+                        const elapsed = (Date.now() - this.startTime) / 1000;
+                        const progress = Math.min(elapsed / WASH_TIME_SECONDS, 1);
+                        this.element.querySelector('.progress-bar').style.width = `${progress * 100}%`;
+
+                        if(elapsed >= WASH_TIME_SECONDS){
+                            this.is_active = false;
+                            this.element.querySelector('.shake').classList.remove('shake');
+                            this.element.querySelector('.progress-bar-container').classList.add('hidden');
+                            this.element.querySelector('.progress-bar').style.width = '0%';
+                            
+                            this.items.forEach(item => {
+                                 player.inventory.wet.push(item);
+                            });
+                            this.items = [];
+                            updateAllInventories();
+                        }
+                    }
+                 }
+            }
+            
+            class ClothesLine extends DraggableGear {
+                 constructor(def) {
+                    super(def);
+                    this.items = []; // {item, startTime}
+                    this.element.style.width = `${20 + def.capacity * 30}px`;
+                    this.element.style.height = `80px`;
+                    this.element.innerHTML = `<div class="w-full h-full flex items-center justify-between relative"><div class="w-3 h-full ${def.name.includes('Silver') ? 'bg-gray-400' : def.name.includes('Gold') ? 'bg-yellow-400' : 'bg-yellow-800'} rounded-full"></div><div class="w-full h-1 bg-gray-600 absolute top-1/2 -translate-y-1/2"></div><div class="w-3 h-full ${def.name.includes('Silver') ? 'bg-gray-400' : def.name.includes('Gold') ? 'bg-yellow-400' : 'bg-yellow-800'} rounded-full"></div><div class="clothes-container absolute inset-0 flex justify-around items-center"></div></div>`;
+                 }
+
+                 onClick(){
+                    if(this.items.length < this.def.capacity && player.inventory.wet.length > 0) {
+                         const item = player.inventory.wet.shift();
+                         this.items.push({item, startTime: Date.now()});
+                         this.drawClothes();
+                         updateAllInventories();
+                    }
+                 }
+                
+                update(){
+                    let changed = false;
+                    this.items = this.items.filter(dryingItem => {
+                         const elapsed = (Date.now() - dryingItem.startTime) / 1000;
+                         const progress = Math.min(elapsed / DRY_TIME_SECONDS, 1);
+                         const clothEl = this.element.querySelector(`[data-id='${dryingItem.item.id}']`);
+                         if(clothEl){
+                            clothEl.querySelector('.progress-bar').style.width = `${progress*100}%`;
+                         }
+
+                         if (elapsed >= DRY_TIME_SECONDS) {
+                            player.inventory.dry.push(dryingItem.item);
+                            changed = true;
+                            return false; // remove from drying items
+                         }
+                         return true;
+                    });
+                    if (changed) {
+                        this.drawClothes();
+                        updateAllInventories();
+                    }
+                }
+                 
+                drawClothes() {
+                    const container = this.element.querySelector('.clothes-container');
+                    container.innerHTML = '';
+                    this.items.forEach(dryingItem => {
+                        const clothEl = document.createElement('div');
+                        clothEl.dataset.id = dryingItem.item.id;
+                        clothEl.className = "relative";
+                        clothEl.innerHTML = `
+                            ${shops.clothing.getClothingHTML(dryingItem.item.type)}
+                            <div class="absolute -bottom-2 w-full h-1.5 bg-gray-500 rounded-full"><div class="progress-bar bg-green-500 h-full rounded-full" style="width:0%"></div></div>
+                        `;
+                        container.appendChild(clothEl);
+                    })
+                }
+            }
+
+            // --- Event Listeners ---
+            startButton.addEventListener('click', initGame);
+            tutorialButton.addEventListener('click', () => tutorialScreen.classList.remove('hidden'));
+            closeTutorialButton.addEventListener('click', () => tutorialScreen.classList.add('hidden'));
+            ingameBackButton.addEventListener('click', () => {
+                gameScreen.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+                gameState = 'menu';
+                clearInterval(autosellInterval);
+            });
+
+            clothingStoreObj.addEventListener('click', () => {
+                shops.clothing.display();
+                shopModal.classList.remove('hidden');
+                gameState = 'shop';
+            });
+             gearStoreObj.addEventListener('click', () => {
+                shops.gear.display();
+                shopModal.classList.remove('hidden');
+                gameState = 'shop';
+            });
+            closeShopButton.addEventListener('click', () => {
+                 shopModal.classList.add('hidden');
+                 gameState = 'playing';
+            });
+
+            startAutosellButton.addEventListener('click', () => {
+                if (autosellInterval) {
+                    clearInterval(autosellInterval);
+                    autosellInterval = null;
+                    startAutosellButton.textContent = 'Start Autosell';
+                    startAutosellButton.classList.replace('bg-orange-500', 'bg-red-500');
+                    autosellTimerDisplay.textContent = '';
+                } else {
+                    let duration = parseInt(autosellInput.value, 10);
+                    if (isNaN(duration) || duration <= 0) duration = 5;
+                    autosellInput.value = duration;
+                    
+                    startAutosellButton.textContent = 'Stop Autosell';
+                    startAutosellButton.classList.replace('bg-red-500', 'bg-orange-500');
+
+                    const sell = () => {
+                         let totalValue = 0;
+                         player.inventory.dry.forEach(c => totalValue += CLOTHES_DEFINITIONS[c.type].value);
+                         player.dryckles += totalValue;
+                         player.inventory.dry = [];
+                         updateAllInventories();
+                         updateDryckles();
+                    };
+                    
+                    let countdown = duration;
+                    autosellTimerDisplay.textContent = `Selling in ${countdown}s`;
+                    sell(); // Sell once immediately
+                    autosellInterval = setInterval(() => {
+                         countdown--;
+                         autosellTimerDisplay.textContent = `Selling in ${countdown}s`;
+                         if (countdown <= 0) {
+                             sell();
+                             countdown = duration;
+                         }
+                    }, 1000);
+                }
+            });
+
+            // Dragging logic
+            window.addEventListener('mousemove', (e) => {
+                if (draggedItem) {
+                    const plotRect = plot.getBoundingClientRect();
+                    let x = e.clientX - plotRect.left - dragOffsetX;
+                    let y = e.clientY - plotRect.top - dragOffsetY;
+                    
+                    draggedItem.element.style.left = `${x}px`;
+                    draggedItem.element.style.top = `${y}px`;
+                }
+            });
+            
+            // Generate clouds
+            for (let i = 0; i < 15; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                const size = Math.random() * 100 + 50;
+                cloud.style.width = `${size}px`;
+                cloud.style.height = `${size / 2}px`;
+                cloud.style.top = `${Math.random() * 30}%`;
+                cloud.style.left = `${Math.random() * 100}%`;
+                cloud.style.animationDuration = `${Math.random() * 40 + 20}s`;
+                cloud.style.animationDelay = `${Math.random() * -60}s`;
+                document.getElementById('cloud-container').appendChild(cloud);
+            }
+
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        });
+    </script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+    
+
+  
+  
+
+
+ 
